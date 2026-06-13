@@ -11,11 +11,12 @@ Encode Lab expects the bundled FFmpeg runtime to provide stable behavior across 
 
 - `zscale` filter
 - `tonemap` filter
-- `libx265` encoder
 - `libx264` encoder
-- `libvpx-vp9` encoder when available
-- `libsvtav1` encoder when available
-- `dav1d` decoder when available
+- `libx265` encoder
+- `libaom-av1` encoder
+- `libsvtav1` encoder
+- `libvpx-vp9` encoder
+- `dav1d` decoder
 
 ## Preview behavior protected by this runtime
 
@@ -41,4 +42,3 @@ LEGAL.md
 ```
 
 On Windows, DLLs may live beside `ffmpeg.exe` in `bin/`.
-

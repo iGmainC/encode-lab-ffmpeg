@@ -64,10 +64,9 @@ jobs:
             base-devel
             curl
             git
+            mingw-w64-ucrt-x86_64-aom
             mingw-w64-ucrt-x86_64-dav1d
             mingw-w64-ucrt-x86_64-gcc
-            mingw-w64-ucrt-x86_64-lame
-            mingw-w64-ucrt-x86_64-opus
             mingw-w64-ucrt-x86_64-libtool
             mingw-w64-ucrt-x86_64-libvpx
             mingw-w64-ucrt-x86_64-nasm

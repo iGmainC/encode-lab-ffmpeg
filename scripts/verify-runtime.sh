@@ -16,6 +16,10 @@ fi
 # 这里验证的是 Encode Lab 真实依赖的能力，不只验证二进制能启动。
 "${FFMPEG_BIN}" -hide_banner -filters | awk '{ print $2 }' | grep -qx "zscale"
 "${FFMPEG_BIN}" -hide_banner -filters | awk '{ print $2 }' | grep -qx "tonemap"
+"${FFMPEG_BIN}" -hide_banner -encoders | grep -q "libx264"
 "${FFMPEG_BIN}" -hide_banner -encoders | grep -q "libx265"
+"${FFMPEG_BIN}" -hide_banner -encoders | grep -q "libaom-av1"
+"${FFMPEG_BIN}" -hide_banner -encoders | grep -q "libsvtav1"
+"${FFMPEG_BIN}" -hide_banner -encoders | grep -q "libvpx-vp9"
 
 echo "Encode Lab FFmpeg runtime verification passed: ${FFMPEG_BIN}"

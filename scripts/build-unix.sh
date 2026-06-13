@@ -25,6 +25,13 @@ fi
 
 rsync -a --delete "${SRC_DIR}/ffmpeg-${FFMPEG_VERSION}/" "${BUILD_DIR}/"
 
+if [[ "${TARGET}" == darwin-* ]]; then
+  BREW_PREFIX="$(brew --prefix)"
+  # GitHub macOS runner 的非交互 shell 不总是带 Homebrew pkg-config 路径。
+  export PATH="${BREW_PREFIX}/bin:${PATH}"
+  export PKG_CONFIG_PATH="${BREW_PREFIX}/lib/pkgconfig:${BREW_PREFIX}/share/pkgconfig${PKG_CONFIG_PATH:+:${PKG_CONFIG_PATH}}"
+fi
+
 # 这些开关定义 Encode Lab 客户端依赖的 runtime 能力边界。
 CONFIGURE_FLAGS=(
   "--prefix=${INSTALL_DIR}"
@@ -34,9 +41,8 @@ CONFIGURE_FLAGS=(
   "--enable-gpl"
   "--enable-version3"
   "--enable-pic"
+  "--enable-libaom"
   "--enable-libdav1d"
-  "--enable-libmp3lame"
-  "--enable-libopus"
   "--enable-libsvtav1"
   "--enable-libvpx"
   "--enable-libx264"

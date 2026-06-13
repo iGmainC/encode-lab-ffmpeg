@@ -30,7 +30,7 @@ cat >"${DIST_DIR}/manifest.json" <<JSON
   "ffmpegVersionLine": "${FFMPEG_VERSION_LINE}",
   "builtAt": "${BUILT_AT}",
   "requiredFilters": ["zscale", "tonemap"],
-  "requiredEncoders": ["libx265"],
+  "requiredEncoders": ["libx264", "libx265", "libaom-av1", "libsvtav1", "libvpx-vp9"],
   "licenseMode": "gpl"
 }
 JSON

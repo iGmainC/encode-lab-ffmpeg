@@ -10,11 +10,10 @@ sudo apt-get install -y \
   ca-certificates \
   curl \
   git \
+  libaom-dev \
   libdav1d-dev \
-  libmp3lame-dev \
   libnuma-dev \
-  libopus-dev \
-  libsvtav1-dev \
+  libsvtav1enc-dev \
   libtool \
   libvpx-dev \
   libx264-dev \

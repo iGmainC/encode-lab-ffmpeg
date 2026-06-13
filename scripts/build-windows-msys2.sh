@@ -36,9 +36,8 @@ pushd "${BUILD_DIR}" >/dev/null
   --disable-ffplay \
   --enable-gpl \
   --enable-version3 \
+  --enable-libaom \
   --enable-libdav1d \
-  --enable-libmp3lame \
-  --enable-libopus \
   --enable-libsvtav1 \
   --enable-libvpx \
   --enable-libx264 \
