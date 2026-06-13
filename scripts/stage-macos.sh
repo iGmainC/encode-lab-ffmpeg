@@ -43,8 +43,37 @@ copy_and_rewrite_deps() {
   done
 }
 
+# 打包 MoltenVK ICD，确保 libplacebo 在没有系统 Vulkan 驱动的 macOS 客户端也能初始化。
+stage_moltenvk_icd() {
+  local moltenvk_prefix
+  moltenvk_prefix="$(brew --prefix molten-vk)"
+
+  mkdir -p "${DIST_DIR}/etc/vulkan/icd.d"
+  cp "${moltenvk_prefix}/lib/libMoltenVK.dylib" "${DIST_DIR}/lib/"
+  cp "${moltenvk_prefix}/etc/vulkan/icd.d/MoltenVK_icd.json" "${DIST_DIR}/etc/vulkan/icd.d/"
+
+  # Homebrew manifest 内的路径指向 cellar；产物内必须改成相对 artifact 根目录的 lib。
+  perl -0pi -e 's#"library_path"\s*:\s*"[^"]+"#"library_path": "../../../lib/libMoltenVK.dylib"#' \
+    "${DIST_DIR}/etc/vulkan/icd.d/MoltenVK_icd.json"
+}
+
+# 对已改写 install name/rpath 的 Mach-O 文件重新做 ad-hoc 签名，避免 macOS dyld 运行时直接杀掉进程。
+sign_runtime_files() {
+  local item
+
+  # 先签依赖库，再签最终入口二进制，确保入口文件看到的是稳定的依赖签名状态。
+  while IFS= read -r item; do
+    codesign --force --sign - "${item}"
+  done < <(find "${DIST_DIR}/lib" -type f | sort)
+
+  codesign --force --sign - "${DIST_DIR}/bin/ffmpeg"
+  codesign --force --sign - "${DIST_DIR}/bin/ffprobe"
+}
+
 # rpath 指向随包 lib 目录，避免依赖用户本机 Homebrew 路径。
 install_name_tool -add_rpath "@executable_path/../lib" "${DIST_DIR}/bin/ffmpeg" || true
 install_name_tool -add_rpath "@executable_path/../lib" "${DIST_DIR}/bin/ffprobe" || true
+stage_moltenvk_icd
 copy_and_rewrite_deps "${DIST_DIR}/bin/ffmpeg"
 copy_and_rewrite_deps "${DIST_DIR}/bin/ffprobe"
+sign_runtime_files

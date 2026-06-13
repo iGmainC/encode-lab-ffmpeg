@@ -29,7 +29,7 @@ cat >"${DIST_DIR}/manifest.json" <<JSON
   "ffmpegVersion": "${FFMPEG_VERSION}",
   "ffmpegVersionLine": "${FFMPEG_VERSION_LINE}",
   "builtAt": "${BUILT_AT}",
-  "requiredFilters": ["zscale", "tonemap"],
+  "requiredFilters": ["libplacebo", "zscale", "tonemap"],
   "requiredEncoders": ["libx264", "libx265", "libaom-av1", "libsvtav1", "libvpx-vp9"],
   "licenseMode": "gpl"
 }
