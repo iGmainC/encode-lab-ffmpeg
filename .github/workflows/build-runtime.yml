@@ -1,0 +1,128 @@
+name: Build Encode Lab FFmpeg Runtime
+
+on:
+  workflow_dispatch:
+    inputs:
+      ffmpeg_version:
+        description: "FFmpeg release version"
+        required: true
+        default: "8.1.1"
+      create_release:
+        description: "Create or update a GitHub release"
+        required: true
+        default: "false"
+        type: choice
+        options:
+          - "false"
+          - "true"
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build ${{ matrix.target }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-24.04
+            platform: linux
+            target: linux-x64
+          - os: macos-15
+            platform: macos
+            target: darwin-arm64
+          - os: macos-15-intel
+            platform: macos
+            target: darwin-x64
+          - os: windows-2022
+            platform: windows
+            target: windows-x64
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Linux dependencies
+        if: matrix.platform == 'linux'
+        run: ./scripts/install-deps-linux.sh
+
+      - name: Install macOS dependencies
+        if: matrix.platform == 'macos'
+        run: ./scripts/install-deps-macos.sh
+
+      - name: Setup MSYS2
+        if: matrix.platform == 'windows'
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: UCRT64
+          update: true
+          path-type: inherit
+          install: >-
+            base-devel
+            curl
+            git
+            mingw-w64-ucrt-x86_64-dav1d
+            mingw-w64-ucrt-x86_64-gcc
+            mingw-w64-ucrt-x86_64-lame
+            mingw-w64-ucrt-x86_64-opus
+            mingw-w64-ucrt-x86_64-libtool
+            mingw-w64-ucrt-x86_64-libvpx
+            mingw-w64-ucrt-x86_64-nasm
+            mingw-w64-ucrt-x86_64-pkgconf
+            mingw-w64-ucrt-x86_64-svt-av1
+            mingw-w64-ucrt-x86_64-x264
+            mingw-w64-ucrt-x86_64-x265
+            mingw-w64-ucrt-x86_64-yasm
+            mingw-w64-ucrt-x86_64-zimg
+            rsync
+            tar
+            xz
+
+      - name: Build Unix runtime
+        if: matrix.platform != 'windows'
+        env:
+          FFMPEG_VERSION: ${{ inputs.ffmpeg_version }}
+        run: ./scripts/build-unix.sh "${{ matrix.target }}"
+
+      - name: Build Windows runtime
+        if: matrix.platform == 'windows'
+        env:
+          FFMPEG_VERSION: ${{ inputs.ffmpeg_version }}
+        shell: msys2 {0}
+        run: ./scripts/build-windows-msys2.sh "${{ matrix.target }}"
+
+      - name: Package artifact
+        run: |
+          cd dist
+          tar -czf "encode-lab-ffmpeg-${{ matrix.target }}.tar.gz" "${{ matrix.target }}"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: encode-lab-ffmpeg-${{ matrix.target }}
+          path: dist/encode-lab-ffmpeg-${{ matrix.target }}.tar.gz
+          if-no-files-found: error
+
+  release:
+    name: Publish release assets
+    runs-on: ubuntu-24.04
+    needs: build
+    if: inputs.create_release == 'true'
+    steps:
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: encode-lab-ffmpeg-*
+          path: release-assets
+          merge-multiple: true
+
+      - name: Upload release assets
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ffmpeg-${{ inputs.ffmpeg_version }}
+          name: Encode Lab FFmpeg ${{ inputs.ffmpeg_version }}
+          files: release-assets/*.tar.gz
+          make_latest: false
