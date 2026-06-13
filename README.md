@@ -7,9 +7,7 @@ Encode Lab 的专用 FFmpeg runtime 构建仓库。目标是固定 FFmpeg 版本
 GitHub Actions 会生成以下 artifact：
 
 - `encode-lab-ffmpeg-darwin-arm64`
-- `encode-lab-ffmpeg-darwin-x64`
 - `encode-lab-ffmpeg-linux-x64`
-- `encode-lab-ffmpeg-windows-x64`
 
 每个 artifact 至少包含：
 
@@ -21,7 +19,7 @@ SHA256SUMS
 LEGAL.md
 ```
 
-Windows artifact 中的可执行文件为 `.exe`。
+Windows 与 Intel macOS 构建脚本暂时保留，但默认 workflow 先不生成对应 artifact。
 
 ## 必备能力
 
