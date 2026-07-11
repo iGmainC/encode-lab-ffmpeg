@@ -147,5 +147,7 @@ case "${TARGET}" in
   *) echo "unsupported target: ${TARGET}" >&2; exit 1 ;;
 esac
 
+echo "runtime staged: ${DIST_DIR}"
 "${ROOT_DIR}/scripts/write-manifest.sh" "${TARGET}" "${DIST_DIR}"
+echo "runtime manifest written: ${DIST_DIR}/manifest.json"
 "${ROOT_DIR}/scripts/verify-runtime.sh" "${DIST_DIR}"

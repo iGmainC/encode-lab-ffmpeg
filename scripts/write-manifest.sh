@@ -16,11 +16,30 @@ else
   DOVI_TOOL_BIN="${DIST_DIR}/bin/dovi_tool"
 fi
 
+if [[ "${TARGET}" == linux-* ]]; then
+  # 与客户端启动环境一致，manifest 探测必须从 bundled lib 目录解析动态库。
+  export LD_LIBRARY_PATH="${DIST_DIR}/lib${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}"
+fi
+
+capture_version_line() {
+  local label="${1:?version label is required}"
+  shift
+  local output
+  if ! output="$("$@" 2>&1)"; then
+    echo "failed to query ${label} version" >&2
+    echo "${output}" >&2
+    return 1
+  fi
+
+  output="${output%%$'\n'*}"
+  printf '%s' "${output//\"/\\\"}"
+}
+
 # manifest 记录可审计的构建能力，客户端后续可用它做版本和能力判断。
-# `head` 会提前关闭管道，配合 pipefail 可能让仍在输出的 x265 因 SIGPIPE 误判构建失败。
-FFMPEG_VERSION_LINE="$("${FFMPEG_BIN}" -hide_banner -version | sed -n '1p' | sed 's/"/\\"/g')"
-X265_VERSION_LINE="$("${X265_BIN}" --version 2>&1 | sed -n '1p' | sed 's/"/\\"/g')"
-DOVI_TOOL_VERSION_LINE="$("${DOVI_TOOL_BIN}" --version 2>&1 | sed -n '1p' | sed 's/"/\\"/g')"
+# 先完整捕获输出再取首行，避免 pipefail/SIGPIPE，并在动态库缺失时保留原始错误。
+FFMPEG_VERSION_LINE="$(capture_version_line ffmpeg "${FFMPEG_BIN}" -hide_banner -version)"
+X265_VERSION_LINE="$(capture_version_line x265 "${X265_BIN}" --version)"
+DOVI_TOOL_VERSION_LINE="$(capture_version_line dovi_tool "${DOVI_TOOL_BIN}" --version)"
 BUILT_AT="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
 
 if command -v shasum >/dev/null 2>&1; then

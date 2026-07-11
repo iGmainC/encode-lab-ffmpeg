@@ -19,7 +19,14 @@ cp "${ROOT_DIR}/LEGAL.md" "${DIST_DIR}/"
 # 收集非基础系统库，避免用户机器缺少 libzimg/libx265 等依赖时运行失败。
 copy_deps() {
   local binary="$1"
-  ldd "${binary}" | awk '/=> \// { print $3 }' | while read -r dep; do
+  local ldd_output
+  if ! ldd_output="$(ldd "${binary}" 2>&1)"; then
+    echo "failed to inspect runtime dependencies: ${binary}" >&2
+    echo "${ldd_output}" >&2
+    return 1
+  fi
+
+  while read -r dep; do
     [[ -f "${dep}" ]] || continue
     case "${dep}" in
       # 基础 glibc 相关库跟随目标系统，避免打包动态链接器造成兼容风险。
@@ -27,8 +34,8 @@ copy_deps() {
         continue
         ;;
     esac
-    cp -n "${dep}" "${DIST_DIR}/lib/" || true
-  done
+    cp --update=none "${dep}" "${DIST_DIR}/lib/"
+  done < <(awk '/=> \// { print $3 }' <<<"${ldd_output}")
 }
 
 while IFS= read -r item; do
@@ -37,5 +44,8 @@ done < <(find "${DIST_DIR}/bin" -type f | sort)
 
 # rpath 指向 artifact 内的 lib 目录，让客户端不依赖系统库搜索路径。
 while IFS= read -r item; do
-  patchelf --set-rpath '$ORIGIN/../lib' "${item}" || true
+  if ! patchelf --set-rpath '$ORIGIN/../lib' "${item}"; then
+    echo "failed to set bundled library rpath: ${item}" >&2
+    exit 1
+  fi
 done < <(find "${DIST_DIR}/bin" -type f | sort)

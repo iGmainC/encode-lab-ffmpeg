@@ -21,6 +21,11 @@ if [[ -f "${VULKAN_ICD}" ]]; then
   export VK_ICD_FILENAMES="${VULKAN_ICD}"
 fi
 
+if [[ "$(uname -s)" == "Linux" ]]; then
+  # 客户端也会为 bundled runtime 设置该路径；验证必须使用同一加载模型。
+  export LD_LIBRARY_PATH="${RUNTIME_DIR}/lib${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}"
+fi
+
 "${FFMPEG_BIN}" -hide_banner -version >/dev/null
 "${FFPROBE_BIN}" -hide_banner -version >/dev/null
 "${X265_BIN}" --version >/dev/null 2>&1
