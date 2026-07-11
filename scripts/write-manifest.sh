@@ -67,18 +67,21 @@ case "${TARGET}" in
     MINIMUM_SYSTEM_VERSION="${MACOS_MINIMUM_VERSION}"
     LIBPLACEBO_BUILD_SOURCE="homebrew:$(brew list --versions libplacebo)"
     VULKAN_HEADERS_BUILD_SOURCE="homebrew:$(brew list --versions vulkan-headers)"
+    DAV1D_BUILD_SOURCE="homebrew:$(brew list --versions dav1d)"
     ;;
   linux-*)
     MINIMUM_SYSTEM_NAME="glibc"
     MINIMUM_SYSTEM_VERSION="${LINUX_GLIBC_MINIMUM_VERSION}"
     LIBPLACEBO_BUILD_SOURCE="git:${LIBPLACEBO_COMMIT}"
     VULKAN_HEADERS_BUILD_SOURCE="git:${VULKAN_HEADERS_COMMIT}"
+    DAV1D_BUILD_SOURCE="git:${DAV1D_COMMIT}"
     ;;
   windows-*)
     MINIMUM_SYSTEM_NAME="Windows"
     MINIMUM_SYSTEM_VERSION="unspecified"
     LIBPLACEBO_BUILD_SOURCE="system:untracked"
     VULKAN_HEADERS_BUILD_SOURCE="system:untracked"
+    DAV1D_BUILD_SOURCE="system:untracked"
     ;;
   *)
     echo "unsupported manifest target: ${TARGET}" >&2
@@ -110,6 +113,7 @@ cat >"${DIST_DIR}/manifest.json" <<JSON
     "mesonSha256": "${MESON_SOURCE_SHA256}"
   },
   "buildDependencySources": {
+    "dav1d": "${DAV1D_BUILD_SOURCE}",
     "libplacebo": "${LIBPLACEBO_BUILD_SOURCE}",
     "vulkanHeaders": "${VULKAN_HEADERS_BUILD_SOURCE}"
   },

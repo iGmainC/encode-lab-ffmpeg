@@ -83,6 +83,8 @@ if [[ "${TARGET}" == linux-* ]]; then
 fi
 
 if [[ "${TARGET}" == linux-* ]]; then
+  DAV1D_SRC="${SRC_DIR}/dav1d-${DAV1D_VERSION}"
+  DAV1D_PREFIX="${ROOT_DIR}/build/dav1d/${DAV1D_VERSION}"
   VULKAN_HEADERS_SRC="${SRC_DIR}/Vulkan-Headers-${VULKAN_HEADERS_VERSION}"
   VULKAN_HEADERS_PREFIX="${ROOT_DIR}/build/vulkan-headers/${VULKAN_HEADERS_VERSION}"
   LIBPLACEBO_SRC="${SRC_DIR}/libplacebo-${LIBPLACEBO_VERSION}"
@@ -93,6 +95,24 @@ if [[ "${TARGET}" == linux-* ]]; then
   download_verified_archive "${MESON_SOURCE_URL}" "${MESON_PYZ}" "${MESON_SOURCE_SHA256}"
   chmod u+x "${MESON_PYZ}"
   MESON=("${MESON_PYZ}")
+
+  if [[ ! -f "${DAV1D_PREFIX}/lib/pkgconfig/dav1d.pc" ]]; then
+    rm -rf "${DAV1D_SRC}" "${DAV1D_PREFIX}"
+    checkout_pinned_commit "${DAV1D_SOURCE_URL}" "${DAV1D_COMMIT}" "${DAV1D_SRC}"
+    "${MESON[@]}" setup "${DAV1D_SRC}/build" "${DAV1D_SRC}" \
+      --prefix="${DAV1D_PREFIX}" \
+      --libdir=lib \
+      --buildtype=release \
+      --default-library=shared \
+      -Denable_tools=false \
+      -Denable_tests=false
+    "${MESON[@]}" compile -C "${DAV1D_SRC}/build"
+    "${MESON[@]}" install -C "${DAV1D_SRC}/build"
+  fi
+
+  # Ubuntu 22.04 只提供 dav1d 0.9，低于 FFmpeg 8.1.1 要求；固定源码版本并优先参与链接。
+  export PKG_CONFIG_PATH="${DAV1D_PREFIX}/lib/pkgconfig${PKG_CONFIG_PATH:+:${PKG_CONFIG_PATH}}"
+  export LD_LIBRARY_PATH="${DAV1D_PREFIX}/lib${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}"
 
   if [[ ! -f "${VULKAN_HEADERS_PREFIX}/include/vulkan/vulkan.h" ]]; then
     rm -rf "${VULKAN_HEADERS_SRC}" "${VULKAN_HEADERS_PREFIX}"

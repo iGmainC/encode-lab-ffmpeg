@@ -24,7 +24,7 @@ LEGAL.md
 
 Windows 与 Intel macOS 构建脚本暂时保留，但默认 workflow 先不生成对应 artifact。
 
-当前发布基线为 macOS 15（Apple Silicon）和 glibc 2.35（Linux x64，对应 Ubuntu 22.04 运行基线）。每个 manifest 会记录 runtime 仓库提交、核心源码摘要、关键构建依赖来源，以及对应平台的最低系统版本。
+当前发布基线为 macOS 15（Apple Silicon）和 glibc 2.35（Linux x64，对应 Ubuntu 22.04 运行基线）。Linux 的 `dav1d`、`libplacebo` 和 Vulkan Headers 均固定到源码提交构建，不依赖发行版中的功能版本。每个 manifest 会记录 runtime 仓库提交、核心源码摘要、关键构建依赖来源，以及对应平台的最低系统版本。
 
 ## 必备能力
 
@@ -52,7 +52,7 @@ macOS artifact 会随包携带 MoltenVK ICD 和 `libMoltenVK.dylib`，客户端�
 ## 手动触发构建
 
 ```bash
-gh workflow run build-runtime.yml -f runtime_version=8.1.1-rpu.4 -f ffmpeg_version=8.1.1 -f create_release=true
+gh workflow run build-runtime.yml -f runtime_version=8.1.1-rpu.5 -f ffmpeg_version=8.1.1 -f create_release=true
 ```
 
 Release 版本和 tag 是不可变的；同名版本已存在时 workflow 会直接失败，修复构建后必须递增 `rpu.N`。Release 同时发布 archive 级 `SHA256SUMS`，客户端构建脚本仍固定内置所使用版本的摘要，下载后校验通过才会替换本地 runtime。

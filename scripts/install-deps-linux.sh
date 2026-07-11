@@ -14,7 +14,6 @@ sudo apt-get install -y \
   glslang-dev \
   glslang-tools \
   libaom-dev \
-  libdav1d-dev \
   liblcms2-dev \
   libnuma-dev \
   libsvtav1enc-dev \
