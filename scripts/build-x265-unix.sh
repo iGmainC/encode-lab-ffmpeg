@@ -11,10 +11,16 @@ ARCHIVE="${SRC_DIR}/x265_${X265_VERSION}.tar.gz"
 SOURCE_DIR="${SRC_DIR}/x265_${X265_VERSION}"
 BUILD_ROOT="${ROOT_DIR}/build/x265/${TARGET}"
 PARALLEL="$(getconf _NPROCESSORS_ONLN 2>/dev/null || sysctl -n hw.ncpu)"
+if [[ "${TARGET}" == darwin-* ]]; then
+  RUNTIME_RPATH="@loader_path/../lib"
+else
+  RUNTIME_RPATH='$ORIGIN/../lib'
+fi
 
 mkdir -p "${SRC_DIR}"
 if [[ ! -f "${ARCHIVE}" ]]; then
-  curl -fL "${X265_SOURCE_URL}" -o "${ARCHIVE}"
+  curl -fL --retry 3 "${X265_SOURCE_URL}" -o "${ARCHIVE}.partial"
+  mv "${ARCHIVE}.partial" "${ARCHIVE}"
 fi
 
 # 下载内容必须匹配固定摘要，避免上游同名归档变化后生成不可复现产物。
@@ -46,7 +52,7 @@ cp "${BUILD_ROOT}/10bit/libx265.a" "${BUILD_ROOT}/8bit/libx265_main10.a"
 cmake -S "${SOURCE_DIR}/source" -B "${BUILD_ROOT}/8bit" \
   -DCMAKE_BUILD_TYPE=Release \
   -DCMAKE_INSTALL_PREFIX="${PREFIX}" \
-  -DCMAKE_INSTALL_RPATH="${PREFIX}/lib" \
+  -DCMAKE_INSTALL_RPATH="${RUNTIME_RPATH}" \
   -DLINKED_10BIT=ON \
   -DEXTRA_LINK_FLAGS=-L. \
   -DEXTRA_LIB=x265_main10.a \

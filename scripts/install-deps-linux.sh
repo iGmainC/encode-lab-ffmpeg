@@ -17,7 +17,6 @@ sudo apt-get install -y \
   libdav1d-dev \
   liblcms2-dev \
   libnuma-dev \
-  libshaderc-dev \
   libsvtav1enc-dev \
   libtool \
   libvulkan-dev \

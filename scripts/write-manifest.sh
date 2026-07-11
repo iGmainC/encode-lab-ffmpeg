@@ -41,6 +41,50 @@ FFMPEG_VERSION_LINE="$(capture_version_line ffmpeg "${FFMPEG_BIN}" -hide_banner 
 X265_VERSION_LINE="$(capture_version_line x265 "${X265_BIN}" --version)"
 DOVI_TOOL_VERSION_LINE="$(capture_version_line dovi_tool "${DOVI_TOOL_BIN}" --version)"
 BUILT_AT="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+RUNTIME_SOURCE_COMMIT="${RUNTIME_SOURCE_COMMIT:-$(git -C "${ROOT_DIR}" rev-parse HEAD)}"
+
+# 版本输出必须与固定输入一致，避免构建工具误读外层仓库或系统二进制。
+if [[ "${FFMPEG_VERSION_LINE}" != "ffmpeg version ${FFMPEG_VERSION}"* ]]; then
+  echo "unexpected FFmpeg version: ${FFMPEG_VERSION_LINE}" >&2
+  exit 1
+fi
+if [[ "${X265_VERSION_LINE}" != *"version ${X265_VERSION}"* ]]; then
+  echo "unexpected x265 version: ${X265_VERSION_LINE}" >&2
+  exit 1
+fi
+if [[ "${DOVI_TOOL_VERSION_LINE}" != "dovi_tool ${DOVI_TOOL_VERSION}" ]]; then
+  echo "unexpected dovi_tool version: ${DOVI_TOOL_VERSION_LINE}" >&2
+  exit 1
+fi
+if [[ ! "${RUNTIME_SOURCE_COMMIT}" =~ ^[0-9a-f]{40}$ ]]; then
+  echo "invalid runtime source commit: ${RUNTIME_SOURCE_COMMIT}" >&2
+  exit 1
+fi
+
+case "${TARGET}" in
+  darwin-*)
+    MINIMUM_SYSTEM_NAME="macOS"
+    MINIMUM_SYSTEM_VERSION="${MACOS_MINIMUM_VERSION}"
+    LIBPLACEBO_BUILD_SOURCE="homebrew:$(brew list --versions libplacebo)"
+    VULKAN_HEADERS_BUILD_SOURCE="homebrew:$(brew list --versions vulkan-headers)"
+    ;;
+  linux-*)
+    MINIMUM_SYSTEM_NAME="glibc"
+    MINIMUM_SYSTEM_VERSION="${LINUX_GLIBC_MINIMUM_VERSION}"
+    LIBPLACEBO_BUILD_SOURCE="git:${LIBPLACEBO_COMMIT}"
+    VULKAN_HEADERS_BUILD_SOURCE="git:${VULKAN_HEADERS_COMMIT}"
+    ;;
+  windows-*)
+    MINIMUM_SYSTEM_NAME="Windows"
+    MINIMUM_SYSTEM_VERSION="unspecified"
+    LIBPLACEBO_BUILD_SOURCE="system:untracked"
+    VULKAN_HEADERS_BUILD_SOURCE="system:untracked"
+    ;;
+  *)
+    echo "unsupported manifest target: ${TARGET}" >&2
+    exit 1
+    ;;
+esac
 
 if command -v shasum >/dev/null 2>&1; then
   CHECKSUM_CMD=(shasum -a 256)
@@ -52,12 +96,26 @@ cat >"${DIST_DIR}/manifest.json" <<JSON
 {
   "name": "encode-lab-ffmpeg-runtime",
   "runtimeVersion": "${RUNTIME_VERSION}",
+  "runtimeSourceCommit": "${RUNTIME_SOURCE_COMMIT}",
   "target": "${TARGET}",
   "ffmpegVersion": "${FFMPEG_VERSION}",
   "ffmpegVersionLine": "${FFMPEG_VERSION_LINE}",
   "x265VersionLine": "${X265_VERSION_LINE}",
   "doviToolVersion": "${DOVI_TOOL_VERSION}",
   "doviToolVersionLine": "${DOVI_TOOL_VERSION_LINE}",
+  "sourcePins": {
+    "ffmpegSha256": "${FFMPEG_SOURCE_SHA256}",
+    "x265Sha256": "${X265_SOURCE_SHA256}",
+    "doviToolSha256": "${DOVI_TOOL_SOURCE_SHA256}"
+  },
+  "buildDependencySources": {
+    "libplacebo": "${LIBPLACEBO_BUILD_SOURCE}",
+    "vulkanHeaders": "${VULKAN_HEADERS_BUILD_SOURCE}"
+  },
+  "minimumSystem": {
+    "name": "${MINIMUM_SYSTEM_NAME}",
+    "version": "${MINIMUM_SYSTEM_VERSION}"
+  },
   "builtAt": "${BUILT_AT}",
   "requiredCommands": ["ffmpeg", "ffprobe", "x265", "dovi_tool"],
   "requiredFilters": ["libplacebo", "zscale", "tonemap"],

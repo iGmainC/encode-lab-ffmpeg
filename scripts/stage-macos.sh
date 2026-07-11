@@ -38,14 +38,64 @@ copy_and_rewrite_deps() {
           if [[ ! -f "${DIST_DIR}/lib/${base}" ]]; then
             cp "${dep}" "${DIST_DIR}/lib/${base}"
             chmod u+w "${DIST_DIR}/lib/${base}"
-            install_name_tool -id "@rpath/${base}" "${DIST_DIR}/lib/${base}" || true
+            install_name_tool -id "@rpath/${base}" "${DIST_DIR}/lib/${base}"
             changed=1
           fi
-          install_name_tool -change "${dep}" "@rpath/${base}" "${item}" || true
+          install_name_tool -change "${dep}" "@rpath/${base}" "${item}"
         fi
       done < <(otool -L "${item}" | awk 'NR > 1 { print $1 }')
     done < <(find "${DIST_DIR}/bin" "${DIST_DIR}/lib" -type f)
   done
+}
+
+list_rpaths() {
+  otool -l "$1" | awk '$1 == "cmd" && $2 == "LC_RPATH" { getline; getline; print $2 }'
+}
+
+is_external_rpath() {
+  case "$1" in
+    /opt/homebrew/*|/usr/local/*|"${ROOT_DIR}"/build/*) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+# 删除构建机绝对 rpath，并确保入口只从 artifact 的 lib 目录解析依赖。
+normalize_runtime_rpaths() {
+  local item
+  local rpath
+  while IFS= read -r item; do
+    while IFS= read -r rpath; do
+      if is_external_rpath "${rpath}"; then
+        install_name_tool -delete_rpath "${rpath}" "${item}"
+      fi
+    done < <(list_rpaths "${item}")
+
+    if [[ "${item}" == "${DIST_DIR}/bin/"* ]] && \
+      ! list_rpaths "${item}" | awk '$0 == "@executable_path/../lib" { found = 1 } END { exit found ? 0 : 1 }'; then
+      install_name_tool -add_rpath "@executable_path/../lib" "${item}"
+    fi
+  done < <(find "${DIST_DIR}/bin" "${DIST_DIR}/lib" -type f | sort)
+}
+
+# CI 构建树仍存在时也不能掩盖漏包；任何外部依赖或 rpath 都直接失败。
+validate_runtime_references() {
+  local item
+  local reference
+  while IFS= read -r item; do
+    while IFS= read -r reference; do
+      if is_external_dylib "${reference}"; then
+        echo "staged Mach-O retains external dependency: ${item} -> ${reference}" >&2
+        exit 1
+      fi
+    done < <(otool -L "${item}" | awk 'NR > 1 { print $1 }')
+
+    while IFS= read -r reference; do
+      if is_external_rpath "${reference}"; then
+        echo "staged Mach-O retains external rpath: ${item} -> ${reference}" >&2
+        exit 1
+      fi
+    done < <(list_rpaths "${item}")
+  done < <(find "${DIST_DIR}/bin" "${DIST_DIR}/lib" -type f | sort)
 }
 
 # 固定源码构建的 x265 使用 @rpath install name，无法通过绝对路径依赖扫描自动发现。
@@ -100,11 +150,9 @@ sign_runtime_files() {
   done < <(find "${DIST_DIR}/bin" -type f | sort)
 }
 
-# rpath 指向随包 lib 目录，避免依赖用户本机 Homebrew 路径。
-while IFS= read -r item; do
-  install_name_tool -add_rpath "@executable_path/../lib" "${item}" || true
-done < <(find "${DIST_DIR}/bin" -type f | sort)
 stage_moltenvk_icd
 stage_pinned_x265
 copy_and_rewrite_deps "${DIST_DIR}/bin/ffmpeg"
+normalize_runtime_rpaths
+validate_runtime_references
 sign_runtime_files

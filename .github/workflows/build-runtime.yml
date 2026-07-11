@@ -6,13 +6,13 @@ on:
       runtime_version:
         description: "Encode Lab runtime release version"
         required: true
-        default: "8.1.1-rpu.1"
+        default: "8.1.1-rpu.2"
       ffmpeg_version:
         description: "FFmpeg release version"
         required: true
         default: "8.1.1"
       create_release:
-        description: "Create or update a GitHub release"
+        description: "Create an immutable GitHub release"
         required: true
         default: "false"
         type: choice
@@ -21,7 +21,11 @@ on:
           - "true"
 
 permissions:
-  contents: write
+  contents: read
+
+concurrency:
+  group: ffmpeg-runtime-${{ inputs.runtime_version }}
+  cancel-in-progress: false
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
@@ -35,7 +39,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: ubuntu-24.04
+          - os: ubuntu-22.04
             platform: linux
             target: linux-x64
           - os: macos-15
@@ -89,6 +93,7 @@ jobs:
         env:
           RUNTIME_VERSION: ${{ inputs.runtime_version }}
           FFMPEG_VERSION: ${{ inputs.ffmpeg_version }}
+          RUNTIME_SOURCE_COMMIT: ${{ github.sha }}
         run: ./scripts/build-unix.sh "${{ matrix.target }}"
 
       - name: Build Windows runtime
@@ -101,7 +106,21 @@ jobs:
       - name: Package artifact
         run: |
           cd dist
-          tar -czf "encode-lab-ffmpeg-${{ matrix.target }}.tar.gz" "${{ matrix.target }}"
+          COPYFILE_DISABLE=1 tar -czf "encode-lab-ffmpeg-${{ matrix.target }}.tar.gz" "${{ matrix.target }}"
+
+      - name: Verify Linux artifact on minimum runtime baseline
+        if: matrix.platform == 'linux'
+        run: |
+          docker run --rm \
+            -v "${PWD}/dist/${{ matrix.target }}:/runtime:ro" \
+            ubuntu:22.04 \
+            bash -euc '
+              export LD_LIBRARY_PATH=/runtime/lib
+              /runtime/bin/ffmpeg -hide_banner -version >/dev/null
+              /runtime/bin/ffprobe -hide_banner -version >/dev/null
+              /runtime/bin/x265 --version >/dev/null
+              /runtime/bin/dovi_tool --version >/dev/null
+            '
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
@@ -115,6 +134,8 @@ jobs:
     runs-on: ubuntu-24.04
     needs: build
     if: inputs.create_release == 'true'
+    permissions:
+      contents: write
     steps:
       - name: Download build artifacts
         uses: actions/download-artifact@v4
@@ -123,10 +144,32 @@ jobs:
           path: release-assets
           merge-multiple: true
 
+      - name: Reject an existing runtime version
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ffmpeg-${{ inputs.runtime_version }}
+        run: |
+          if gh release view "${RELEASE_TAG}" --repo "${GITHUB_REPOSITORY}" >/dev/null 2>&1; then
+            echo "runtime release already exists: ${RELEASE_TAG}" >&2
+            exit 1
+          fi
+          if gh api "repos/${GITHUB_REPOSITORY}/git/ref/tags/${RELEASE_TAG}" >/dev/null 2>&1; then
+            echo "runtime tag already exists: ${RELEASE_TAG}" >&2
+            exit 1
+          fi
+
+      - name: Generate release asset checksums
+        run: |
+          cd release-assets
+          sha256sum *.tar.gz > SHA256SUMS
+
       - name: Upload release assets
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ffmpeg-${{ inputs.runtime_version }}
           name: Encode Lab FFmpeg Runtime ${{ inputs.runtime_version }}
-          files: release-assets/*.tar.gz
+          target_commitish: ${{ github.sha }}
+          files: release-assets/*
           make_latest: false
+          overwrite_files: false
+          fail_on_unmatched_files: true

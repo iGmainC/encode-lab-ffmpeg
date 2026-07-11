@@ -28,9 +28,9 @@ copy_deps() {
 
   while read -r dep; do
     [[ -f "${dep}" ]] || continue
-    case "${dep}" in
-      # 基础 glibc 相关库跟随目标系统，避免打包动态链接器造成兼容风险。
-      /lib64/ld-linux-*|/lib/x86_64-linux-gnu/libc.so.*|/lib/x86_64-linux-gnu/libpthread.so.*|/lib/x86_64-linux-gnu/libm.so.*|/lib/x86_64-linux-gnu/libdl.so.*)
+    case "$(basename "${dep}")" in
+      # 所有 glibc 组件都跟随最低支持系统，禁止混入新版 libmvec/librt 等破坏 ABI 基线。
+      ld-linux-*.so.*|libc.so.*|libpthread.so.*|libm.so.*|libmvec.so.*|libdl.so.*|librt.so.*|libresolv.so.*|libutil.so.*|libanl.so.*)
         continue
         ;;
     esac
