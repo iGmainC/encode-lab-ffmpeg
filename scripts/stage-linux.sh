@@ -49,3 +49,17 @@ while IFS= read -r item; do
     exit 1
   fi
 done < <(find "${DIST_DIR}/bin" -type f | sort)
+
+# 重定位后再次检查，避免 artifact 到客户端后才暴露缺失动态库。
+while IFS= read -r item; do
+  if ! ldd_output="$(LD_LIBRARY_PATH="${DIST_DIR}/lib" ldd "${item}" 2>&1)"; then
+    echo "failed to validate staged runtime dependencies: ${item}" >&2
+    echo "${ldd_output}" >&2
+    exit 1
+  fi
+  if [[ "${ldd_output}" == *"not found"* ]]; then
+    echo "staged runtime has unresolved dependencies: ${item}" >&2
+    echo "${ldd_output}" >&2
+    exit 1
+  fi
+done < <(find "${DIST_DIR}/bin" -type f | sort)

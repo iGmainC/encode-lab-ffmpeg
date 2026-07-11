@@ -26,10 +26,22 @@ if [[ "$(uname -s)" == "Linux" ]]; then
   export LD_LIBRARY_PATH="${RUNTIME_DIR}/lib${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}"
 fi
 
-"${FFMPEG_BIN}" -hide_banner -version >/dev/null
-"${FFPROBE_BIN}" -hide_banner -version >/dev/null
-"${X265_BIN}" --version >/dev/null 2>&1
-"${DOVI_TOOL_BIN}" --version >/dev/null
+verify_command() {
+  local label="${1:?command label is required}"
+  shift
+  local output
+  if ! output="$("$@" 2>&1)"; then
+    echo "runtime command failed: ${label}" >&2
+    echo "${output}" >&2
+    exit 1
+  fi
+}
+
+verify_command ffmpeg-version "${FFMPEG_BIN}" -hide_banner -version
+verify_command ffprobe-version "${FFPROBE_BIN}" -hide_banner -version
+verify_command x265-version "${X265_BIN}" --version
+verify_command dovi-tool-version "${DOVI_TOOL_BIN}" --version
+echo "runtime commands started successfully"
 
 FILTERS="$("${FFMPEG_BIN}" -hide_banner -filters)"
 ENCODERS="$("${FFMPEG_BIN}" -hide_banner -encoders)"
