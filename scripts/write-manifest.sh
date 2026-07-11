@@ -17,9 +17,10 @@ else
 fi
 
 # manifest 记录可审计的构建能力，客户端后续可用它做版本和能力判断。
-FFMPEG_VERSION_LINE="$("${FFMPEG_BIN}" -hide_banner -version | head -n 1 | sed 's/"/\\"/g')"
-X265_VERSION_LINE="$("${X265_BIN}" --version 2>&1 | head -n 1 | sed 's/"/\\"/g')"
-DOVI_TOOL_VERSION_LINE="$("${DOVI_TOOL_BIN}" --version 2>&1 | head -n 1 | sed 's/"/\\"/g')"
+# `head` 会提前关闭管道，配合 pipefail 可能让仍在输出的 x265 因 SIGPIPE 误判构建失败。
+FFMPEG_VERSION_LINE="$("${FFMPEG_BIN}" -hide_banner -version | sed -n '1p' | sed 's/"/\\"/g')"
+X265_VERSION_LINE="$("${X265_BIN}" --version 2>&1 | sed -n '1p' | sed 's/"/\\"/g')"
+DOVI_TOOL_VERSION_LINE="$("${DOVI_TOOL_BIN}" --version 2>&1 | sed -n '1p' | sed 's/"/\\"/g')"
 BUILT_AT="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
 
 if command -v shasum >/dev/null 2>&1; then
