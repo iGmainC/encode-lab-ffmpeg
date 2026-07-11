@@ -91,7 +91,8 @@ if [[ "${TARGET}" == linux-* ]]; then
 
   # Ubuntu 22.04 的系统 Meson 低于 libplacebo 要求；使用固定单文件发行物保持构建基线可复现。
   download_verified_archive "${MESON_SOURCE_URL}" "${MESON_PYZ}" "${MESON_SOURCE_SHA256}"
-  MESON=(python3 "${MESON_PYZ}")
+  chmod u+x "${MESON_PYZ}"
+  MESON=("${MESON_PYZ}")
 
   if [[ ! -f "${VULKAN_HEADERS_PREFIX}/include/vulkan/vulkan.h" ]]; then
     rm -rf "${VULKAN_HEADERS_SRC}" "${VULKAN_HEADERS_PREFIX}"

@@ -133,6 +133,7 @@ stage_moltenvk_icd() {
   mkdir -p "${DIST_DIR}/etc/vulkan/icd.d"
   cp "${moltenvk_prefix}/lib/libMoltenVK.dylib" "${DIST_DIR}/lib/"
   chmod u+w "${DIST_DIR}/lib/libMoltenVK.dylib"
+  install_name_tool -id "@rpath/libMoltenVK.dylib" "${DIST_DIR}/lib/libMoltenVK.dylib"
   cp "${moltenvk_prefix}/etc/vulkan/icd.d/MoltenVK_icd.json" "${DIST_DIR}/etc/vulkan/icd.d/"
 
   # Homebrew manifest 内的路径指向 cellar；产物内必须改成相对 artifact 根目录的 lib。
