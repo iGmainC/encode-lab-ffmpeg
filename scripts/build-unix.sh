@@ -87,6 +87,11 @@ if [[ "${TARGET}" == linux-* ]]; then
   VULKAN_HEADERS_PREFIX="${ROOT_DIR}/build/vulkan-headers/${VULKAN_HEADERS_VERSION}"
   LIBPLACEBO_SRC="${SRC_DIR}/libplacebo-${LIBPLACEBO_VERSION}"
   LIBPLACEBO_PREFIX="${ROOT_DIR}/build/libplacebo/${LIBPLACEBO_VERSION}"
+  MESON_PYZ="${SRC_DIR}/meson-${MESON_VERSION}.pyz"
+
+  # Ubuntu 22.04 的系统 Meson 低于 libplacebo 要求；使用固定单文件发行物保持构建基线可复现。
+  download_verified_archive "${MESON_SOURCE_URL}" "${MESON_PYZ}" "${MESON_SOURCE_SHA256}"
+  MESON=(python3 "${MESON_PYZ}")
 
   if [[ ! -f "${VULKAN_HEADERS_PREFIX}/include/vulkan/vulkan.h" ]]; then
     rm -rf "${VULKAN_HEADERS_SRC}" "${VULKAN_HEADERS_PREFIX}"
@@ -106,7 +111,7 @@ if [[ "${TARGET}" == linux-* ]]; then
     mkdir -p "${LIBPLACEBO_SRC}/3rdparty/Vulkan-Headers/registry"
     ln -s "${VULKAN_HEADERS_PREFIX}/include" "${LIBPLACEBO_SRC}/3rdparty/Vulkan-Headers/include"
     ln -s "${VULKAN_HEADERS_PREFIX}/share/vulkan/registry/vk.xml" "${LIBPLACEBO_SRC}/3rdparty/Vulkan-Headers/registry/vk.xml"
-    meson setup "${LIBPLACEBO_SRC}/build" "${LIBPLACEBO_SRC}" \
+    "${MESON[@]}" setup "${LIBPLACEBO_SRC}/build" "${LIBPLACEBO_SRC}" \
       --prefix="${LIBPLACEBO_PREFIX}" \
       --libdir=lib \
       --buildtype=release \
@@ -125,8 +130,8 @@ if [[ "${TARGET}" == linux-* ]]; then
       -Dfuzz=false \
       -Dunwind=disabled \
       -Dxxhash=enabled
-    meson compile -C "${LIBPLACEBO_SRC}/build"
-    meson install -C "${LIBPLACEBO_SRC}/build"
+    "${MESON[@]}" compile -C "${LIBPLACEBO_SRC}/build"
+    "${MESON[@]}" install -C "${LIBPLACEBO_SRC}/build"
   fi
 
   # 系统 libplacebo 版本与 FFmpeg 8.1.1 不兼容，必须让 configure 优先使用固定版本。

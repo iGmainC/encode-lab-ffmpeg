@@ -106,7 +106,8 @@ cat >"${DIST_DIR}/manifest.json" <<JSON
   "sourcePins": {
     "ffmpegSha256": "${FFMPEG_SOURCE_SHA256}",
     "x265Sha256": "${X265_SOURCE_SHA256}",
-    "doviToolSha256": "${DOVI_TOOL_SOURCE_SHA256}"
+    "doviToolSha256": "${DOVI_TOOL_SOURCE_SHA256}",
+    "mesonSha256": "${MESON_SOURCE_SHA256}"
   },
   "buildDependencySources": {
     "libplacebo": "${LIBPLACEBO_BUILD_SOURCE}",

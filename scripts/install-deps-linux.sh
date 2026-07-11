@@ -24,7 +24,6 @@ sudo apt-get install -y \
   libx264-dev \
   libxxhash-dev \
   libzimg-dev \
-  meson \
   nasm \
   ninja-build \
   patchelf \

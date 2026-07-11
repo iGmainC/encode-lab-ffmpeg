@@ -59,6 +59,10 @@ is_external_rpath() {
   esac
 }
 
+uses_runtime_rpath() {
+  otool -L "$1" | awk 'NR > 1 && $1 ~ /^@rpath\// { found = 1 } END { exit found ? 0 : 1 }'
+}
+
 # 删除构建机绝对 rpath，并确保入口只从 artifact 的 lib 目录解析依赖。
 normalize_runtime_rpaths() {
   local item
@@ -70,7 +74,7 @@ normalize_runtime_rpaths() {
       fi
     done < <(list_rpaths "${item}")
 
-    if [[ "${item}" == "${DIST_DIR}/bin/"* ]] && \
+    if [[ "${item}" == "${DIST_DIR}/bin/"* ]] && uses_runtime_rpath "${item}" && \
       ! list_rpaths "${item}" | awk '$0 == "@executable_path/../lib" { found = 1 } END { exit found ? 0 : 1 }'; then
       install_name_tool -add_rpath "@executable_path/../lib" "${item}"
     fi
