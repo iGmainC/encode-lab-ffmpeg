@@ -43,8 +43,9 @@ verify_command x265-version "${X265_BIN}" --version
 verify_command dovi-tool-version "${DOVI_TOOL_BIN}" --version
 echo "runtime commands started successfully"
 
-FILTERS="$("${FFMPEG_BIN}" -hide_banner -filters)"
-ENCODERS="$("${FFMPEG_BIN}" -hide_banner -encoders)"
+# 列表和帮助命令在部分平台会返回非零状态；能力是否可用应以实际输出为准。
+FILTERS="$("${FFMPEG_BIN}" -hide_banner -filters 2>&1 || true)"
+ENCODERS="$("${FFMPEG_BIN}" -hide_banner -encoders 2>&1 || true)"
 
 require_filter() {
   local name="${1:?filter name is required}"
@@ -75,7 +76,7 @@ require_encoder "libsvtav1"
 require_encoder "libvpx-vp9"
 
 # Dolby Vision 预览 SDR 映射依赖 libplacebo 读取 RPU，不能只验证 filter 名称存在。
-LIBPLACEBO_HELP="$("${FFMPEG_BIN}" -hide_banner -h filter=libplacebo)"
+LIBPLACEBO_HELP="$("${FFMPEG_BIN}" -hide_banner -h filter=libplacebo 2>&1 || true)"
 if [[ "${LIBPLACEBO_HELP}" != *"apply_dolbyvision"* ]]; then
   echo "libplacebo filter is missing apply_dolbyvision support" >&2
   exit 1
@@ -88,13 +89,14 @@ if [[ "${X265_HELP}" != *"--dolby-vision-profile"* || "${X265_HELP}" != *"--dolb
   exit 1
 fi
 
-DOVI_TOOL_HELP="$("${DOVI_TOOL_BIN}" --help 2>&1)"
+DOVI_TOOL_HELP="$("${DOVI_TOOL_BIN}" --help 2>&1 || true)"
 for command in extract-rpu inject-rpu demux export info generate; do
   if [[ "${DOVI_TOOL_HELP}" != *"${command}"* ]]; then
     echo "dovi_tool is missing required command: ${command}" >&2
     exit 1
   fi
 done
+echo "runtime capability listings validated"
 
 # 真实跑一条最小 RPU 编码链路，覆盖工具存在但版本或参数不兼容的情况。
 SMOKE_DIR="$(mktemp -d)"
