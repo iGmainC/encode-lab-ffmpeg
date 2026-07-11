@@ -128,28 +128,35 @@ cat >"${SMOKE_DIR}/rpu-p5.json" <<'JSON'
 }
 JSON
 
-"${DOVI_TOOL_BIN}" generate -j "${SMOKE_DIR}/rpu.json" -o "${SMOKE_DIR}/RPU.bin" >/dev/null
-"${DOVI_TOOL_BIN}" generate -j "${SMOKE_DIR}/rpu-p5.json" -o "${SMOKE_DIR}/RPU-p5.bin" >/dev/null
-"${FFMPEG_BIN}" -hide_banner -v error -y \
+verify_command dovi-generate-p81 \
+  "${DOVI_TOOL_BIN}" generate -j "${SMOKE_DIR}/rpu.json" -o "${SMOKE_DIR}/RPU.bin"
+verify_command dovi-generate-p5 \
+  "${DOVI_TOOL_BIN}" generate -j "${SMOKE_DIR}/rpu-p5.json" -o "${SMOKE_DIR}/RPU-p5.bin"
+verify_command ffmpeg-generate-y4m \
+  "${FFMPEG_BIN}" -hide_banner -v error -y \
   -f lavfi -i "testsrc2=s=64x64:r=24" \
   -frames:v 10 -pix_fmt yuv420p10le -strict -1 -f yuv4mpegpipe \
   "${SMOKE_DIR}/input.y4m"
-"${X265_BIN}" --y4m --input "${SMOKE_DIR}/input.y4m" \
+verify_command x265-encode-p81 \
+  "${X265_BIN}" --y4m --input "${SMOKE_DIR}/input.y4m" \
   --output "${SMOKE_DIR}/encoded.hevc" \
   --frames 10 --profile main10 --preset ultrafast --crf 28 \
   --vbv-maxrate 10000 --vbv-bufsize 10000 --hrd \
   --dolby-vision-profile 8.1 --dolby-vision-rpu "${SMOKE_DIR}/RPU.bin" \
   --colorprim bt2020 --transfer smpte2084 --colormatrix bt2020nc --range limited \
   --master-display "G(13250,34500)B(7500,3000)R(34000,16000)WP(15635,16450)L(10000000,1)" \
-  --max-cll "1000,400" >/dev/null 2>&1
-"${X265_BIN}" --y4m --input "${SMOKE_DIR}/input.y4m" \
+  --max-cll "1000,400"
+verify_command x265-encode-p5 \
+  "${X265_BIN}" --y4m --input "${SMOKE_DIR}/input.y4m" \
   --output "${SMOKE_DIR}/encoded-p5.hevc" \
   --frames 10 --profile main10 --preset ultrafast --crf 28 \
   --vbv-maxrate 10000 --vbv-bufsize 10000 --hrd \
   --dolby-vision-profile 5 --dolby-vision-rpu "${SMOKE_DIR}/RPU-p5.bin" \
-  --colorprim bt2020 --transfer smpte2084 --colormatrix ipt-pq-c2 --range full >/dev/null 2>&1
-"${DOVI_TOOL_BIN}" extract-rpu -i "${SMOKE_DIR}/encoded.hevc" -o "${SMOKE_DIR}/roundtrip-rpu.bin" >/dev/null
-"${DOVI_TOOL_BIN}" info -i "${SMOKE_DIR}/roundtrip-rpu.bin" -f 9 >/dev/null
+  --colorprim bt2020 --transfer smpte2084 --colormatrix ipt-pq-c2 --range full
+verify_command dovi-extract-roundtrip \
+  "${DOVI_TOOL_BIN}" extract-rpu -i "${SMOKE_DIR}/encoded.hevc" -o "${SMOKE_DIR}/roundtrip-rpu.bin"
+verify_command dovi-info-roundtrip \
+  "${DOVI_TOOL_BIN}" info -i "${SMOKE_DIR}/roundtrip-rpu.bin" -f 9
 
 if [[ ! -s "${SMOKE_DIR}/encoded.hevc" || ! -s "${SMOKE_DIR}/roundtrip-rpu.bin" ]]; then
   echo "Dolby Vision RPU smoke test did not produce valid artifacts" >&2
