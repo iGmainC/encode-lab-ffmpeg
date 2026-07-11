@@ -34,7 +34,8 @@ copy_deps() {
         continue
         ;;
     esac
-    cp --update=none "${dep}" "${DIST_DIR}/lib/"
+    # Ubuntu 22.04 的 coreutils 尚不支持 cp --update=none；-n 保持同名依赖不覆盖语义。
+    cp -n "${dep}" "${DIST_DIR}/lib/"
   done < <(awk '/=> \// { print $3 }' <<<"${ldd_output}")
 }
 

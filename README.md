@@ -52,7 +52,7 @@ macOS artifact 会随包携带 MoltenVK ICD 和 `libMoltenVK.dylib`，客户端�
 ## 手动触发构建
 
 ```bash
-gh workflow run build-runtime.yml -f runtime_version=8.1.1-rpu.5 -f ffmpeg_version=8.1.1 -f create_release=true
+gh workflow run build-runtime.yml -f runtime_version=8.1.1-rpu.6 -f ffmpeg_version=8.1.1 -f create_release=true
 ```
 
 Release 版本和 tag 是不可变的；同名版本已存在时 workflow 会直接失败，修复构建后必须递增 `rpu.N`。Release 同时发布 archive 级 `SHA256SUMS`，客户端构建脚本仍固定内置所使用版本的摘要，下载后校验通过才会替换本地 runtime。
