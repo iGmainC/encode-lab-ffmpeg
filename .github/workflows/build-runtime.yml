@@ -3,6 +3,10 @@ name: Build Encode Lab FFmpeg Runtime
 on:
   workflow_dispatch:
     inputs:
+      runtime_version:
+        description: "Encode Lab runtime release version"
+        required: true
+        default: "8.1.1-rpu.1"
       ffmpeg_version:
         description: "FFmpeg release version"
         required: true
@@ -42,6 +46,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Setup Rust for dovi_tool
+        uses: dtolnay/rust-toolchain@1.88.0
+
       - name: Install Linux dependencies
         if: matrix.platform == 'linux'
         run: ./scripts/install-deps-linux.sh
@@ -80,6 +87,7 @@ jobs:
       - name: Build Unix runtime
         if: matrix.platform != 'windows'
         env:
+          RUNTIME_VERSION: ${{ inputs.runtime_version }}
           FFMPEG_VERSION: ${{ inputs.ffmpeg_version }}
         run: ./scripts/build-unix.sh "${{ matrix.target }}"
 
@@ -118,7 +126,7 @@ jobs:
       - name: Upload release assets
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ffmpeg-${{ inputs.ffmpeg_version }}
-          name: Encode Lab FFmpeg ${{ inputs.ffmpeg_version }}
+          tag_name: ffmpeg-${{ inputs.runtime_version }}
+          name: Encode Lab FFmpeg Runtime ${{ inputs.runtime_version }}
           files: release-assets/*.tar.gz
           make_latest: false

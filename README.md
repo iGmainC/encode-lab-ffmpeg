@@ -14,6 +14,8 @@ GitHub Actions 会生成以下 artifact：
 ```text
 bin/ffmpeg
 bin/ffprobe
+bin/x265
+bin/dovi_tool
 etc/vulkan/icd.d/MoltenVK_icd.json（macOS）
 manifest.json
 SHA256SUMS
@@ -36,6 +38,9 @@ Windows 与 Intel macOS 构建脚本暂时保留，但默认 workflow 先不生�
 - `libaom-av1` encoder 存在
 - `libsvtav1` encoder 存在
 - `libvpx-vp9` encoder 存在
+- x265 CLI 支持 `--dolby-vision-profile` 与 `--dolby-vision-rpu`
+- `dovi_tool` 支持 RPU 提取、注入、信息读取和 Profile 7 拆层
+- 10 帧 Profile 8.1 RPU 编码与反向提取 smoke test 通过
 
 `libplacebo` 用于 Dolby Vision 预览时读取 RPU 并映射到 BT.709 SDR；`zscale` 来自 `libzimg`，作为 HDR10 / HLG 预览 SDR 映射 fallback。
 
@@ -44,7 +49,7 @@ macOS artifact 会随包携带 MoltenVK ICD 和 `libMoltenVK.dylib`，客户端�
 ## 手动触发构建
 
 ```bash
-gh workflow run build-runtime.yml -f ffmpeg_version=8.1.1
+gh workflow run build-runtime.yml -f runtime_version=8.1.1-rpu.1 -f ffmpeg_version=8.1.1
 ```
 
 ## 许可边界

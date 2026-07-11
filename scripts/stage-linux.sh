@@ -8,7 +8,12 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 rm -rf "${DIST_DIR}"
 mkdir -p "${DIST_DIR}/bin" "${DIST_DIR}/lib"
-cp "${INSTALL_DIR}/bin/ffmpeg" "${INSTALL_DIR}/bin/ffprobe" "${DIST_DIR}/bin/"
+cp \
+  "${INSTALL_DIR}/bin/ffmpeg" \
+  "${INSTALL_DIR}/bin/ffprobe" \
+  "${INSTALL_DIR}/bin/x265" \
+  "${INSTALL_DIR}/bin/dovi_tool" \
+  "${DIST_DIR}/bin/"
 cp "${ROOT_DIR}/LEGAL.md" "${DIST_DIR}/"
 
 # 收集非基础系统库，避免用户机器缺少 libzimg/libx265 等依赖时运行失败。
@@ -26,9 +31,11 @@ copy_deps() {
   done
 }
 
-copy_deps "${DIST_DIR}/bin/ffmpeg"
-copy_deps "${DIST_DIR}/bin/ffprobe"
+while IFS= read -r item; do
+  copy_deps "${item}"
+done < <(find "${DIST_DIR}/bin" -type f | sort)
 
 # rpath 指向 artifact 内的 lib 目录，让客户端不依赖系统库搜索路径。
-patchelf --set-rpath '$ORIGIN/../lib' "${DIST_DIR}/bin/ffmpeg" || true
-patchelf --set-rpath '$ORIGIN/../lib' "${DIST_DIR}/bin/ffprobe" || true
+while IFS= read -r item; do
+  patchelf --set-rpath '$ORIGIN/../lib' "${item}" || true
+done < <(find "${DIST_DIR}/bin" -type f | sort)

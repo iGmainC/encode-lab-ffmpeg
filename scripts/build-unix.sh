@@ -10,6 +10,8 @@ BUILD_DIR="${ROOT_DIR}/build/${TARGET}"
 INSTALL_DIR="${ROOT_DIR}/build/install/${TARGET}"
 DIST_DIR="${ROOT_DIR}/dist/${TARGET}"
 ARCHIVE="${SRC_DIR}/ffmpeg-${FFMPEG_VERSION}.tar.xz"
+DOVI_TOOL_ARCHIVE="${SRC_DIR}/dovi_tool-${DOVI_TOOL_VERSION}.tar.gz"
+DOVI_TOOL_SRC="${SRC_DIR}/dovi_tool-${DOVI_TOOL_VERSION}"
 
 mkdir -p "${SRC_DIR}" "${BUILD_DIR}" "${INSTALL_DIR}" "${DIST_DIR}"
 
@@ -122,6 +124,22 @@ make -j"$(getconf _NPROCESSORS_ONLN 2>/dev/null || sysctl -n hw.ncpu)"
 make install
 popd >/dev/null
 
+# dovi_tool 负责提取、转换和检查 RPU；使用 internal-font 避免引入 fontconfig runtime 依赖。
+if [[ ! -f "${DOVI_TOOL_ARCHIVE}" ]]; then
+  curl -L "${DOVI_TOOL_SOURCE_URL}" -o "${DOVI_TOOL_ARCHIVE}"
+fi
+if [[ ! -d "${DOVI_TOOL_SRC}" ]]; then
+  tar -xzf "${DOVI_TOOL_ARCHIVE}" -C "${SRC_DIR}"
+fi
+pushd "${DOVI_TOOL_SRC}" >/dev/null
+cargo build --release --locked --no-default-features --features internal-font
+popd >/dev/null
+cp "${DOVI_TOOL_SRC}/target/release/dovi_tool" "${INSTALL_DIR}/bin/dovi_tool"
+
+# x265 CLI 的 --dolby-vision-rpu 为 CLI-only，必须和 FFmpeg 一起进入客户端 runtime。
+X265_BIN="$(command -v x265)"
+cp "${X265_BIN}" "${INSTALL_DIR}/bin/x265"
+
 case "${TARGET}" in
   # 分平台整理可执行文件和依赖库，保证 artifact 可独立分发。
   linux-*) "${ROOT_DIR}/scripts/stage-linux.sh" "${TARGET}" "${INSTALL_DIR}" "${DIST_DIR}" ;;
@@ -130,4 +148,4 @@ case "${TARGET}" in
 esac
 
 "${ROOT_DIR}/scripts/write-manifest.sh" "${TARGET}" "${DIST_DIR}"
-"${ROOT_DIR}/scripts/verify-runtime.sh" "${DIST_DIR}/bin/ffmpeg"
+"${ROOT_DIR}/scripts/verify-runtime.sh" "${DIST_DIR}"

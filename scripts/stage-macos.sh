@@ -8,7 +8,12 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 rm -rf "${DIST_DIR}"
 mkdir -p "${DIST_DIR}/bin" "${DIST_DIR}/lib"
-cp "${INSTALL_DIR}/bin/ffmpeg" "${INSTALL_DIR}/bin/ffprobe" "${DIST_DIR}/bin/"
+cp \
+  "${INSTALL_DIR}/bin/ffmpeg" \
+  "${INSTALL_DIR}/bin/ffprobe" \
+  "${INSTALL_DIR}/bin/x265" \
+  "${INSTALL_DIR}/bin/dovi_tool" \
+  "${DIST_DIR}/bin/"
 cp "${ROOT_DIR}/LEGAL.md" "${DIST_DIR}/"
 
 # 只复制 Homebrew 动态库；系统库继续由 macOS 提供，降低产物体积和签名风险。
@@ -50,6 +55,7 @@ stage_moltenvk_icd() {
 
   mkdir -p "${DIST_DIR}/etc/vulkan/icd.d"
   cp "${moltenvk_prefix}/lib/libMoltenVK.dylib" "${DIST_DIR}/lib/"
+  chmod u+w "${DIST_DIR}/lib/libMoltenVK.dylib"
   cp "${moltenvk_prefix}/etc/vulkan/icd.d/MoltenVK_icd.json" "${DIST_DIR}/etc/vulkan/icd.d/"
 
   # Homebrew manifest 内的路径指向 cellar；产物内必须改成相对 artifact 根目录的 lib。
@@ -66,14 +72,15 @@ sign_runtime_files() {
     codesign --force --sign - "${item}"
   done < <(find "${DIST_DIR}/lib" -type f | sort)
 
-  codesign --force --sign - "${DIST_DIR}/bin/ffmpeg"
-  codesign --force --sign - "${DIST_DIR}/bin/ffprobe"
+  while IFS= read -r item; do
+    codesign --force --sign - "${item}"
+  done < <(find "${DIST_DIR}/bin" -type f | sort)
 }
 
 # rpath 指向随包 lib 目录，避免依赖用户本机 Homebrew 路径。
-install_name_tool -add_rpath "@executable_path/../lib" "${DIST_DIR}/bin/ffmpeg" || true
-install_name_tool -add_rpath "@executable_path/../lib" "${DIST_DIR}/bin/ffprobe" || true
+while IFS= read -r item; do
+  install_name_tool -add_rpath "@executable_path/../lib" "${item}" || true
+done < <(find "${DIST_DIR}/bin" -type f | sort)
 stage_moltenvk_icd
 copy_and_rewrite_deps "${DIST_DIR}/bin/ffmpeg"
-copy_and_rewrite_deps "${DIST_DIR}/bin/ffprobe"
 sign_runtime_files

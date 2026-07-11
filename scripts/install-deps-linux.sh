@@ -35,5 +35,6 @@ sudo apt-get install -y \
   rsync \
   spirv-tools \
   tar \
+  x265 \
   xz-utils \
   yasm
