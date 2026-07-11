@@ -16,7 +16,6 @@ brew install \
   pkg-config \
   svt-av1 \
   x264 \
-  x265 \
   xz \
   yasm \
   zimg \

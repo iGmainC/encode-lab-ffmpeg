@@ -12,6 +12,7 @@ DIST_DIR="${ROOT_DIR}/dist/${TARGET}"
 ARCHIVE="${SRC_DIR}/ffmpeg-${FFMPEG_VERSION}.tar.xz"
 DOVI_TOOL_ARCHIVE="${SRC_DIR}/dovi_tool-${DOVI_TOOL_VERSION}.tar.gz"
 DOVI_TOOL_SRC="${SRC_DIR}/dovi_tool-${DOVI_TOOL_VERSION}"
+X265_PREFIX="${ROOT_DIR}/build/x265/${TARGET}/install"
 
 mkdir -p "${SRC_DIR}" "${BUILD_DIR}" "${INSTALL_DIR}" "${DIST_DIR}"
 
@@ -32,6 +33,14 @@ if [[ "${TARGET}" == darwin-* ]]; then
   # GitHub macOS runner 的非交互 shell 不总是带 Homebrew pkg-config 路径。
   export PATH="${BREW_PREFIX}/bin:${PATH}"
   export PKG_CONFIG_PATH="${BREW_PREFIX}/lib/pkgconfig:${BREW_PREFIX}/share/pkgconfig${PKG_CONFIG_PATH:+:${PKG_CONFIG_PATH}}"
+fi
+
+# FFmpeg 与随包 CLI 必须使用同一份固定 x265 源码，避免系统包的 P5 色彩标记能力漂移。
+"${ROOT_DIR}/scripts/build-x265-unix.sh" "${TARGET}" "${X265_PREFIX}"
+export PATH="${X265_PREFIX}/bin:${PATH}"
+export PKG_CONFIG_PATH="${X265_PREFIX}/lib/pkgconfig${PKG_CONFIG_PATH:+:${PKG_CONFIG_PATH}}"
+if [[ "${TARGET}" == linux-* ]]; then
+  export LD_LIBRARY_PATH="${X265_PREFIX}/lib${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}"
 fi
 
 if [[ "${TARGET}" == linux-* ]]; then
@@ -137,8 +146,7 @@ popd >/dev/null
 cp "${DOVI_TOOL_SRC}/target/release/dovi_tool" "${INSTALL_DIR}/bin/dovi_tool"
 
 # x265 CLI 的 --dolby-vision-rpu 为 CLI-only，必须和 FFmpeg 一起进入客户端 runtime。
-X265_BIN="$(command -v x265)"
-cp "${X265_BIN}" "${INSTALL_DIR}/bin/x265"
+cp "${X265_PREFIX}/bin/x265" "${INSTALL_DIR}/bin/x265"
 
 case "${TARGET}" in
   # 分平台整理可执行文件和依赖库，保证 artifact 可独立分发。

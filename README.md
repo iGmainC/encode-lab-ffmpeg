@@ -1,6 +1,6 @@
 # Encode Lab FFmpeg Runtime
 
-Encode Lab 的专用 FFmpeg runtime 构建仓库。目标是固定 FFmpeg 版本、编译参数和能力验证，避免用户客户端依赖各自系统 FFmpeg 时出现 `libplacebo`、`zscale`、`tonemap`、`libx265`、`libsvtav1` 等能力不一致。
+Encode Lab 的专用 FFmpeg runtime 构建仓库。目标是固定 FFmpeg、x265、dovi_tool 的版本、编译参数和能力验证，避免用户客户端依赖各自系统组件时出现 `libplacebo`、`zscale`、`tonemap`、Profile 5 色彩标记、RPU 参数等能力不一致。
 
 ## 产物目标
 
@@ -39,8 +39,9 @@ Windows 与 Intel macOS 构建脚本暂时保留，但默认 workflow 先不生�
 - `libsvtav1` encoder 存在
 - `libvpx-vp9` encoder 存在
 - x265 CLI 支持 `--dolby-vision-profile` 与 `--dolby-vision-rpu`
+- x265 由固定的 4.2 源码构建，并同时提供 8-bit / 10-bit 编码能力
 - `dovi_tool` 支持 RPU 提取、注入、信息读取和 Profile 7 拆层
-- 10 帧 Profile 8.1 RPU 编码与反向提取 smoke test 通过
+- 10 帧 Profile 8.1 与 Profile 5 RPU 编码、FFmpeg 重编码和语义比对 smoke test 通过
 
 `libplacebo` 用于 Dolby Vision 预览时读取 RPU 并映射到 BT.709 SDR；`zscale` 来自 `libzimg`，作为 HDR10 / HLG 预览 SDR 映射 fallback。
 

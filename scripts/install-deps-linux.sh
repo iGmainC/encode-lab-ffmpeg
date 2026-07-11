@@ -23,7 +23,6 @@ sudo apt-get install -y \
   libvulkan-dev \
   libvpx-dev \
   libx264-dev \
-  libx265-dev \
   libxxhash-dev \
   libzimg-dev \
   meson \
@@ -35,6 +34,5 @@ sudo apt-get install -y \
   rsync \
   spirv-tools \
   tar \
-  x265 \
   xz-utils \
   yasm

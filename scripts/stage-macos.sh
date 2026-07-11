@@ -16,10 +16,10 @@ cp \
   "${DIST_DIR}/bin/"
 cp "${ROOT_DIR}/LEGAL.md" "${DIST_DIR}/"
 
-# 只复制 Homebrew 动态库；系统库继续由 macOS 提供，降低产物体积和签名风险。
+# 复制 Homebrew 与仓库内固定构建的动态库；系统库继续由 macOS 提供。
 is_external_dylib() {
   case "$1" in
-    /opt/homebrew/*|/usr/local/*) return 0 ;;
+    /opt/homebrew/*|/usr/local/*|"${ROOT_DIR}"/build/*) return 0 ;;
     *) return 1 ;;
   esac
 }
@@ -46,6 +46,29 @@ copy_and_rewrite_deps() {
       done < <(otool -L "${item}" | awk 'NR > 1 { print $1 }')
     done < <(find "${DIST_DIR}/bin" "${DIST_DIR}/lib" -type f)
   done
+}
+
+# 固定源码构建的 x265 使用 @rpath install name，无法通过绝对路径依赖扫描自动发现。
+stage_pinned_x265() {
+  local x265_lib_dir="${ROOT_DIR}/build/x265/${TARGET}/install/lib"
+  local dependency
+  local base
+
+  dependency="$(otool -L "${INSTALL_DIR}/bin/x265" | awk '/@rpath\/libx265.*\.dylib/ { print $1; exit }')"
+  if [[ -z "${dependency}" ]]; then
+    echo "failed to resolve pinned x265 dylib name" >&2
+    exit 1
+  fi
+
+  base="${dependency#@rpath/}"
+  if [[ ! -f "${x265_lib_dir}/${base}" ]]; then
+    echo "missing pinned x265 dylib: ${x265_lib_dir}/${base}" >&2
+    exit 1
+  fi
+
+  cp "${x265_lib_dir}/${base}" "${DIST_DIR}/lib/${base}"
+  chmod u+w "${DIST_DIR}/lib/${base}"
+  install_name_tool -id "@rpath/${base}" "${DIST_DIR}/lib/${base}"
 }
 
 # 打包 MoltenVK ICD，确保 libplacebo 在没有系统 Vulkan 驱动的 macOS 客户端也能初始化。
@@ -82,5 +105,6 @@ while IFS= read -r item; do
   install_name_tool -add_rpath "@executable_path/../lib" "${item}" || true
 done < <(find "${DIST_DIR}/bin" -type f | sort)
 stage_moltenvk_icd
+stage_pinned_x265
 copy_and_rewrite_deps "${DIST_DIR}/bin/ffmpeg"
 sign_runtime_files
